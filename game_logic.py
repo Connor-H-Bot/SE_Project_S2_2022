@@ -28,7 +28,51 @@
 # the piece "BF".
 #
 
-import utils
+import math
+
+# returns the piece that controlls the square represented by "index"
+def controllingPiece(board, index):
+	stack = board[index]
+	if len(stack) == 0: return None
+	return stack.copy().pop()
+
+# returns the piece-type of "piece"
+def pieceType(piece):
+	return piece[1]
+
+# returns the color/player of "piece"
+def pieceColor(piece):
+	return piece[0]
+
+# returns the row that "index" is located in, in a 4x4 matrix
+def row(index):
+	return math.floor(index / 4)
+
+# returns the column that "index" is located in, in a 4x4 matrix
+def column(index):
+	return index % 4
+
+# returns the index of the square that is north of "index" on the board
+def northIndex(index):
+	return index - 4 if index - 4 >= 0 else None
+
+# returns the index of the square that is south of "index" on the board
+def southIndex(index):
+	return index + 4 if index + 4 < 16 else None
+
+# returns the index of the square that is west of "index" on the board
+def westIndex(index):
+	return index - 1 if index - 1 >= 0 and row(index) == row(index - 1) else None
+
+# returns the index of the square that is east of "index" on the board
+def eastIndex(index):
+	return index + 1 if index + 1 < 16 and row(index) == row(index + 1) else None
+
+# returns the indices of the squares that are
+# North, South, East and West of "index" on a 4x4 board
+def adjacentIndices(index):
+	adjacent = [northIndex(index), southIndex(index), westIndex(index), eastIndex(index)]
+	return [i for i in adjacent if i != None]
 
 # returns true if "board" contains a valid road created by "player"
 def roadExists(board, player):
@@ -37,17 +81,17 @@ def roadExists(board, player):
 	def roadExistsRecursive(currentIndex, targetIndex, visited = []):
 		if currentIndex in visited: return False
 
-		currentPiece = utils.controllingPiece(board, currentIndex)
+		currentPiece = controllingPiece(board, currentIndex)
 		if currentPiece == None: return False
-		if utils.pieceColor(currentPiece) != player: return False
+		if pieceColor(currentPiece) != player: return False
 		if len(visited):
-			lastPiece = utils.controllingPiece(board, visited.copy().pop())
+			lastPiece = controllingPiece(board, visited.copy().pop())
 			if currentPiece != lastPiece: return False
 
 		if currentIndex == targetIndex:
 			return True
 
-		for adjacentIndex in utils.adjacentIndices(currentIndex):
+		for adjacentIndex in adjacentIndices(currentIndex):
 			road = roadExistsRecursive(adjacentIndex, targetIndex, [y for x in [visited, [currentIndex]] for y in x])
 			if road: return True
 
@@ -90,38 +134,73 @@ def roadExists(board, player):
 			roadExistsRecursive(12, 11) or
 			roadExistsRecursive(12, 15))
 
-testBoard = [
-	["WF"],["WF"],["WF"],["WF"],
-	["WF"],["WF"],["WF"],["WF"],
-	["WF"],["WF"],["WF"],["WF"],
-	["WF"],["WF"],["WF"],["WF"]
-]
+# Counts the number of flat pieces that each player has on the board,
+# that count towards winning the game (only flat pieces that are controlling a square).
+def countFlatPieces(board):
+	wf = 0
+	bf = 0
+	for index in range(16):
+		controllingPiece = controllingPiece(board, index)
+		if controllingPiece == "WF":
+			wf = wf + 1
+		if controllingPiece == "BF":
+			bf = bf + 1
 
-testBoard2 = [
-	["WF"],["BF"],["BS"],["WS"],
-	["BF"],["WF"],["WF"],["WF"],
-	["BS"],["WF"],["WF"],["WF"],
-	["WS"],["WF"],["WF"],["WF"]
-]
+	return {
+		"W": wf,
+		"B": bf
+	}
 
-testBoard3 = [
-	[],["WF", "WS"],[],[],
-	[],["WF"]      ,[],[],
-	[],["WF"]      ,[],[],
-	[],["WF"]      ,[],[]
-]
+# Counts the number of pieces that each playes has placed on the board
+def countPieces(board):
+	w = 0
+	b = 0
+	for i in range(16):
+		for j in range(len(board[i])):
+			if pieceColor(board[i][j]) == "W":
+				w = w + 1
+			else:
+				b = b + 1
 
-testBoard4 = [
-	[],["WF"],[],[],
-	[],["WF"],[],[],
-	[],["WF"],[],[],
-	[],["WF"],[],[]
-]
+	return {
+		"W": w,
+		"B": b
+	}
 
-print(roadExists(testBoard, "W") == True)
-print(roadExists(testBoard2, "W") == False)
-print(roadExists(testBoard2, "B") == False)
-print(roadExists(testBoard3, "W") == False)
-print(roadExists(testBoard3, "B") == False)
-print(roadExists(testBoard4, "W") == True)
-print(roadExists(testBoard4, "B") == False)
+# returns true if "board" doesn't contain any empty squares, else false
+def boardIsFull(board):
+	for i in range(16):
+		if controllingPiece(board, i) == None:
+			return False
+	return True
+
+# Returns the player that has won the game, either "W" or "B".
+# "activePlayer" is the player that made the move that resulted in
+# the current state of "board".
+#
+# The first player to create a road wins the game.
+#
+# If a player makes a move that creates a road for both players,
+# the player that made the move wins.
+#
+# If the board is full, or neither player has any pieces left to place, the game ends.
+# In order to determine who wins in this case, the flat pieces on the board are counted,
+# and the player with most flat pieces wins the game. Pieces that are underneath a stack of pieces do
+# not count towards this score. If both players have an equal amount of flat pieces that count towards
+# the score, the game ends in a draw.
+def winner(board, activePlayer):
+	if roadExists(board, activePlayer): return activePlayer
+
+	otherPlayer = "W" if activePlayer == "B" else "B"
+	if (countPieces(board)[activePlayer] == 15 or
+		boardIsFull(board)):
+		flatCounts = countFlatPieces(board)
+
+		if flatCounts[activePlayer] > flatCounts[otherPlayer]:
+			return activePlayer
+		elif flatCounts[activePlayer] < flatCounts[otherPlayer]:
+			return otherPlayer
+		else:
+			return "draw"
+
+	return None
