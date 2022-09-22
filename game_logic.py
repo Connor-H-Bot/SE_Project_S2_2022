@@ -140,10 +140,10 @@ def countFlatPieces(board):
 	wf = 0
 	bf = 0
 	for index in range(16):
-		controllingPiece = controllingPiece(board, index)
-		if controllingPiece == "WF":
+		piece = controllingPiece(board, index)
+		if piece == "WF":
 			wf = wf + 1
-		if controllingPiece == "BF":
+		if piece == "BF":
 			bf = bf + 1
 
 	return {
