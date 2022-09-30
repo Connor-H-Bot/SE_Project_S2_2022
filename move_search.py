@@ -30,7 +30,7 @@ def findMove(board, player, depth):
 
 	def alphaBeta(board, player, depth, alpha, beta):
 		if depth == 0:
-			return state_evaluation.score(board, "W" if player == "B" else "B")
+			return state_evaluation.score(board, player)
 
 		winner = game_logic.winner(board,  "W" if player == "B" else "B")
 		if winner != None:
@@ -41,7 +41,7 @@ def findMove(board, player, depth):
 			else:
 				return -math.inf
 
-		for move in game_logic.moves(board, player):
+		for move in state_evaluation.orderedMoves(board, player):
 			board = game_logic.makeMove(board, move)
 			score = -alphaBeta(board, "W" if player == "B" else "B", depth - 1, -beta, -alpha)
 			board = game_logic.unmakeMove(board, move)

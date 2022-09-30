@@ -190,11 +190,14 @@ def boardIsFull(board):
 # the score, the game ends in a draw.
 def winner(board, activePlayer):
 	otherPlayer = "W" if activePlayer == "B" else "B"
+	pieceCounts = countPieces(board)
+	if pieceCounts[activePlayer] + pieceCounts[otherPlayer] < 5: return None
+
 	if roadExists(board, activePlayer): return activePlayer
 	if roadExists(board, otherPlayer): return otherPlayer
 
-	if (countPieces(board)[activePlayer] == 15 or
-		countPieces(board)[otherPlayer] == 15 or
+	if (pieceCounts[activePlayer] == 15 or
+		pieceCounts[otherPlayer] == 15 or
 		boardIsFull(board)):
 		flatCounts = countFlatPieces(board)
 
