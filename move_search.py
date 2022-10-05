@@ -1,6 +1,9 @@
 import math
+import time
 import game_logic
 import state_evaluation
+
+counter = 0
 
 # Returns the "best" move and it's score
 # The implementation is based on the Minimax algorithm with alpha-beta pruning
@@ -11,21 +14,8 @@ import state_evaluation
 #    - Helps always select the shortest path that leads to a win
 #    - Makes it easier to interrupt searching when time limit is
 #      reached, or no more resources are available
-#    - Also makes improvement 2. possible
-#
-# 2. Caching states and scores, so that they can be looked up
-#    - Store scores for the states in a hash table
-#    - Need to be able to calculate a hash from a given game state
-#    - When a previously seen game state is encountered, the score for this
-#      state can be looked up instead of calculating it again
-#
-# 3. Order moves based on how good they are believed to be
-#    - Come up with rules that determine if a move likely is good
-#    - Before being searched through, the moves should be ordered after these rules.
-#    - Aplha-beta pruning, will then have better chances of affecting efficieny
-#
 def findMove(board, player, depth):
-	bestMove = {}
+	bestMove = {"move": None, "score": -math.inf}
 	startDepth = depth
 
 	def alphaBeta(board, player, depth, alpha, beta):
@@ -37,9 +27,9 @@ def findMove(board, player, depth):
 			if winner == "draw":
 				return 0
 			elif winner == player:
-				return math.inf
+				return 1000000
 			else:
-				return -math.inf
+				return -1000000
 
 		for move in state_evaluation.orderedMoves(board, player):
 			board = game_logic.makeMove(board, move)
