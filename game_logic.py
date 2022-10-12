@@ -189,10 +189,15 @@ def boardIsFull(board):
 # not count towards this score. If both players have an equal amount of flat pieces that count towards
 # the score, the game ends in a draw.
 def winner(board, activePlayer):
-	if roadExists(board, activePlayer): return activePlayer
-
 	otherPlayer = "W" if activePlayer == "B" else "B"
-	if (countPieces(board)[activePlayer] == 15 or
+	pieceCounts = countPieces(board)
+	if pieceCounts[activePlayer] + pieceCounts[otherPlayer] < 5: return None
+
+	if roadExists(board, activePlayer): return activePlayer
+	if roadExists(board, otherPlayer): return otherPlayer
+
+	if (pieceCounts[activePlayer] == 15 or
+		pieceCounts[otherPlayer] == 15 or
 		boardIsFull(board)):
 		flatCounts = countFlatPieces(board)
 
@@ -204,3 +209,125 @@ def winner(board, activePlayer):
 			return "draw"
 
 	return None
+
+
+# returns all possible stack moves from the square represented by "index"
+#
+# A stack move is represented by a list that contains sub-moves.
+# Example:
+# 		move: [{"from": 0, "to": 1, "carry": 3}, {"from": 1, "to": 2, "carry": 1}]
+#
+# 		This means that, first the player moves 3 pieces from position 0 to position 1.
+#		Once that is done, the player then moves 1 piece from position 1 to position 2.
+def stackMoves(board, index):
+
+	# returns all possible stack moves from "currentIndex" in the direction given by "direction"
+	def stackMovesDirection(board, currentIndex, direction, carry):
+		if carry == 0: return [[]]
+
+		nextIndex = None
+		if direction == "N": nextIndex = northIndex(currentIndex)
+		elif direction == "S": nextIndex = southIndex(currentIndex)
+		elif direction == "E": nextIndex = eastIndex(currentIndex)
+		elif direction == "W": nextIndex = westIndex(currentIndex)
+		if nextIndex == None: return False
+
+		nextPiece = controllingPiece(board, nextIndex)
+		if nextPiece and pieceType(nextPiece) == "S": return False
+
+		moves = []
+		for i in range(carry):
+			current = stackMovesDirection(board, nextIndex, direction, carry - i - 1)
+			if current == False: continue
+
+			for move in current:
+				subMove = {"from": currentIndex, "to": nextIndex, "carry": carry}
+				moves.append([y for x in [[subMove], move] for y in x])
+
+		return moves
+
+	piecesInStack = len(board[index])
+	carryLimit = piecesInStack if piecesInStack < 4 else 4
+	moves = []
+	for direction in ["N", "S", "E", "W"]:
+		for carry in range(1, carryLimit + 1):
+			directionMoves = stackMovesDirection(board, index, direction, carry)
+			if directionMoves == False: continue
+			moves = [y for x in [moves, directionMoves] for y in x if len(y)]
+
+	return moves
+
+# Returns all possible moves for "player" given the game state represented by "board"
+#
+# New pieces can be placed standing or flat on empty squares.
+#
+# Stacks of pieces can be moved in straight lines orthogonally
+# from the starting point of the move - a player can't change move direction during the move.
+# At least one piece from the moving stack must be left on each square that the move includes.
+def moves(board, player):
+	moves = []
+	for index in range(16):
+		piece = controllingPiece(board, index)
+		if piece == None:
+			moves.append({"to": index, "piece": player+"F"})
+			moves.append({"to": index, "piece": player+"S"})
+			continue
+
+		if pieceColor(piece) != player: continue
+
+		sMoves = stackMoves(board, index)
+		moves = [y for x in [moves, sMoves] for y in x]
+
+	return moves
+
+def getXLast(square, x):
+	return square[-x:]
+
+def removeXLast(square, x):
+	return square[:len(square)-x]
+
+# makes a move that represents moving a stack
+def makeStackMove(board, move, reverse=False):
+	for subMove in ( reversed(move) if reverse else move ):
+		source = subMove["from"] if not reverse else subMove["to"]
+		target = subMove["to"] if not reverse else subMove["from"]
+		carry = subMove["carry"]
+
+		square = board[source]
+		piecesToMove = getXLast(square, carry)
+		board[source] = removeXLast(square, carry)
+
+		board[target] = [y for x in [board[target], piecesToMove] for y in x]
+
+	return board
+
+# makes a move that represents placing a new piece
+def placePiece(board, move, reverse=False):
+	position = move["to"]
+	piece = move["piece"]
+	if not reverse:
+		board[position].append(piece)
+	else:
+		board[position] = removeXLast(board[position], 1)
+
+	return board
+
+# Applies the move represented by "move" to the game state represented by "board"
+# "move" can be either a stack move, or placement of a new piece
+def makeMove(board, move):
+	if type(move) == list:
+		board = makeStackMove(board, move)
+	else:
+		board = placePiece(board, move)
+
+	return board
+
+# reverts "board" to the state it had before "move" was applied
+# "move" can be either a stack move, or placement of a new piece
+def unmakeMove(board, move):
+	if type(move) == list:
+		board = makeStackMove(board, move, True)
+	else:
+		board = placePiece(board, move, True)
+
+	return board
