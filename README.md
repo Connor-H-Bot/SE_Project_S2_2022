@@ -1,11 +1,13 @@
-Board format: 
-		4	[]	[]	[]	[]
-		3	[]	[]	[]	[]
-		2	[]	[]	[]	[]
-		1	[]	[]	[]	[]
-			a	b	c	d		
-		a1 is square 0 and d4 is square 15
-		
+Board format
+```
+4	[12]	[13]	[14]	[15]
+3	[8]	[9]	[10]	[11]
+2	[4]	[5]	[6]	[7]
+1	[0]	[1]	[2]	[3]
+	a	b	c	d		
+a1 is square 0 and d4 is square 15
+```
+
 Movestring formats: 
 	1. Placing a piece: piece_type(F or S) position on the board(columnrow)
 			Example - To place a flat piece on square 0: the move string is Fa1
