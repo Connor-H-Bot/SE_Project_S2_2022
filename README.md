@@ -18,3 +18,5 @@ Movestring formats:
 					  To unstack 3 pieces from c4 to 2 pieces on c3 and one piece on c2: the move string is 3c4-21	
 
 Game.py file has a function execute_move which should be used to make a move.
+
+Game platform and Game AI is integrated. Run the main_game_window.py to play the game.
