@@ -16,7 +16,8 @@ class Game:
 	CELL_WIDTH = 15
 
 	class Player:
-		def __init__(self, flats):
+		def __init__(self, flats, id):
+			self.id = id
 			self.flats = flats
 
 	def __init__(self, n, mode):
@@ -26,8 +27,8 @@ class Game:
 		self.max_flats = 15
 		self.max_movable = n
 		self.players = []
-		self.players.append(Game.Player(self.max_flats))
-		self.players.append(Game.Player(self.max_flats))
+		self.players.append(Game.Player(self.max_flats, 0))
+		self.players.append(Game.Player(self.max_flats, 1))
 		self.board = []
 		for i in range(self.total_squares):
 			self.board.append([])
@@ -57,17 +58,18 @@ class Game:
 					for ii in range(Game.CELL_WIDTH):
 						game_string += ' '
 				else:
-					spaces = (Game.CELL_WIDTH - len(self.board[idx])) / 2
+					spaces = math.floor((Game.CELL_WIDTH - len(self.board[idx])) / 2)
 					game_string += ' ' * spaces
 					game_string += self.square_to_string(self.board[idx])
-					spaces = (Game.CELL_WIDTH - len(self.board[idx]) + 1) / 2
+					spaces = math.floor((Game.CELL_WIDTH - len(self.board[idx]) + 1) / 2)
 					game_string += ' ' * spaces
 			game_string += '\n'
 		game_string += '   '
 		for i in range(self.n):
-			game_string += ' ' * (Game.CELL_WIDTH/2)
+			game_string += ' ' * math.floor(Game.CELL_WIDTH/2)
 			game_string += Game.COLOR_RC + chr(i+97) + Game.COLOR_END
-			game_string += ' ' * (Game.CELL_WIDTH/2)
+			game_string += ' ' * math.floor(Game.CELL_WIDTH/2)
+		
 		return game_string
 
 	def square_to_string(self, square):
@@ -92,6 +94,8 @@ class Game:
 	def render(self):
 		print (self.__str__())
 		print ('\n\n')
+		print ('Press q to exit')
+		print ('Press i for information about moves')
 
 	def execute_move(self,move_string):
 		''' 
@@ -110,7 +114,7 @@ class Game:
 
 		2. Making a stacking/unstacking move: Number_of_pieces_to_pick_up Position_to_pick_from Direction(+,-,<,>) Number_of_pieces_to_place
 											Example - To stack a piece from a1 to b1: the move string is 1 a1 > 1
-													  To unstack 3 pieces from c4 to 2 pieces on c3 and one piece on c2: the move string is 3 c4 - 2 1	
+													  To unstack 3 pieces from c4 to 2 pieces on c3 and one piece on c2: the move string is 3c4-21	
 		Returns
 		0 if move is invalid
 		1 if move is valid
@@ -129,49 +133,58 @@ class Game:
 			current_piece = 1 - self.turn
 		if len(move_string) <= 0:
 			print("Invalid move format!")
-			return 0
+			return 0, current_piece
 		if move_string[0].isalpha():
 			square = self.square_to_num(move_string[1:])
 			if move_string == 'q':
 				exit()
+			if move_string == 'i':
+				print ('\n')
+				print ('Placing Moves Syntax: {piece_type(F or S)}{position on the board(ColumnRow)}')
+				print ('Example: Fa1 or Sd4')
+				print ('Stacking Moves Syntax: {Number_of_pieces_to_pick_up}{Position_to_pick_from Direction(+,-,<,>)}{List_of_Number_of_pieces_to_place}')
+				print ('Example: 2a4-11 or 4b1>22')
+				print ('Invalid Stacking moves: 2a4+11 (out of the board) or 4b1>21 (picked 4 pieces but placing 3)')
+				print ('\n')
+				return 0, current_piece
 			if square == -1:
 				print("Invalid square!")
-				return 0
+				return 0, current_piece
 			if len(self.board[square]) != 0:
 				print("Invalid move. Cannot place your piece on top of another piece")
-				return 0
+				return 0, current_piece
 			if move_string[0] == 'F' or move_string[0] == 'S':	
 				if self.players[current_piece].flats == 0:
 					print("Invalid move. No pieces remaining to place")
-					return 0
-				if self.moves == 1 and move_string[0] == 'S':
-					print("Invalid move. Place a flat piece in the first move")
-					return 0
+					return 0, current_piece
+				#if self.moves == 1 and move_string[0] == 'S':
+				#	print("Invalid move. Place a flat piece in the first move")
+				#	return 0, current_piece
 				# if self.board[square]:
 				# 	if (self.board[square].copy().pop()[1] == 'S'):
 				# 	print("Invalid move. Cannot place your piece on a standing piece")
-				# 	return 0
+				# 	return 0, current_piece
 				self.board[square].append((current_piece, move_string[0]))
 				self.players[current_piece].flats -= 1
 			else:
-				return 0
+				return 0, current_piece
 		elif move_string[0].isdigit():
 			if self.moves <= 1:
-				return 0
+				return 0, current_piece
 			count = int(move_string[0])
 			if count <= 0 or count > self.max_movable:
 				print("Invalid move: Cannot move the pieces")
-				return 0
+				return 0, current_piece
 			square = self.square_to_num(move_string[1:3])
 			if square == -1:
 				print("Invalid square")
-				return 0
+				return 0, current_piece
 			if len(self.board[square]) < count:
 				print("Invalid move: Not enough pieces on the square")
-				return 0
+				return 0, current_piece
 			if self.board[square][-1][0] != current_piece:
 				print("Invalid move. Cannot move other players stack")
-				return 0
+				return 0, current_piece
 			direction = move_string[3]
 			if direction == '+':
 				change = self.n
@@ -182,36 +195,36 @@ class Game:
 			elif direction == '<':
 				change = -1
 			else:
-				return 0
+				return 0, current_piece
 			prev_square = square
 			for i in range(4,len(move_string)):
 				if not move_string[i].isdigit():
-					return 0
+					return 0, current_piece
 				next_count = int(move_string[i])
 				if next_count <= 0 or next_count > count:
-					return 0
+					return 0, current_piece
 				next_square = prev_square + change
 				if (next_square % self.n == 0 and prev_square % self.n == self.n - 1):
 					print("Invalid move. Out of the board")
-					return 0
+					return 0, current_piece
 				if (next_square % self.n == self.n - 1 and prev_square % self.n == 0):
 					print("Invalid move. Out of the board")
-					return 0
+					return 0, current_piece
 				if next_square >= self.total_squares or next_square < 0:
 					print("Invalid move. Out of the board")
-					return 0
+					return 0, current_piece
 				if len(self.board[next_square]) != 0 and self.board[next_square][-1][1] == 'S':
 					if next_count != 1 or i != len(move_string) - 1:
 						print("Invalid move. Cannot stack on standing piece")
-						return 0
+						return 0, current_piece
 					if self.board[square][-1][1] != 'C':
-						return 0
+						return 0, current_piece
 				
 				count = count - next_count
 				prev_square = next_square
 			if count != 0:
 				print("Invalid move format")
-				return 0
+				return 0, current_piece
 			count = int(move_string[0])
 			prev_square = square
 			for i in range(4, len(move_string)):
@@ -229,7 +242,7 @@ class Game:
 			self.board[square] = self.board[square][:-count]
 		else:
 			print("Invalid move")
-			return 0
+			return 0, current_piece
 		winner = -1
 		filled_board = all(len(sqr) > 0 for sqr in self.board)
 		if self.check_road_win(self.turn):
@@ -250,8 +263,8 @@ class Game:
 		elif self.mode == 'CUI':
 			self.render()
 		if winner != -1:
-			return winner
-		return 1
+			return winner, current_piece
+		return 1, current_piece
 
 	def square_to_num(self,square_string):
 		''' Return -1 if square_string is invalid
